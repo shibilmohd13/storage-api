@@ -29,3 +29,27 @@ def read_storage(storage_id: int, db: Session = Depends(get_db)):
     if storage is None:
         raise HTTPException(status_code=404, detail="Storage not found")
     return ResponseModel(code=200, message="Storage Fetched Successfully", data=storage) 
+
+@router.put("/{storage_id}", response_model=ResponseModel)
+def update_storage(storage_id: int, storage: storage_schema.StorageCreate, db: Session = Depends(get_db)):
+    try:
+        updated_storage = storage_crud.update_storage(db=db, storage_id=storage_id, storage=storage)
+        if updated_storage is None:
+            raise HTTPException(status_code=404, detail="Storage not found")
+        return ResponseModel(code=200, message="Storage Updated Successfully", data=updated_storage)
+    
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.delete("/{storage_id}", response_model=ResponseModel)
+def delete_storage(storage_id: int, db: Session = Depends(get_db)):
+    try:
+        is_deleted = storage_crud.delete_storage(db=db, storage_id=storage_id)
+        if not is_deleted:
+            raise HTTPException(status_code=404, detail="Storage not found")
+        return ResponseModel(code=200, message="Storage Deleted Successfully", data=None)
+    
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+

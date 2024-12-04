@@ -36,3 +36,13 @@ def update_vault(db: Session, vault_id: int, vault_update: vault_schema.VaultCre
     db.refresh(vault)
     return vault
 
+def delete_vault(db: Session, vault_id: int):
+    vault = db.query(vault_model.Vault).filter(vault_model.Vault.id == vault_id).first()
+    
+    if not vault:
+        return False
+    
+    db.delete(vault)
+    db.commit()
+    
+    return True

@@ -7,6 +7,7 @@ class VaultBase(BaseModel):
     size: VaultSize
     capacity: int
     price_per_hour: float
+    location: str
 
 class VaultCreate(VaultBase):
     pass

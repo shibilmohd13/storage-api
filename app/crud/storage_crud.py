@@ -74,3 +74,25 @@ def get_available_storages(
 
 def get_storage(db: Session, storage_id: int):
     return db.query(storage_model.Storage).filter(storage_model.Storage.id == storage_id).first()
+
+def update_storage(db: Session, storage_id: int, storage: storage_schema.StorageCreate):
+    existing_storage = db.query(storage_model.Storage).filter(storage_model.Storage.id == storage_id).first()
+    if not existing_storage:
+        return None
+    
+    for key, value in storage.dict(exclude_unset=True).items():
+        setattr(existing_storage, key, value)
+    
+    db.commit()
+    db.refresh(existing_storage)
+    return existing_storage
+
+
+def delete_storage(db: Session, storage_id: int) -> bool:
+    storage = db.query(storage_model.Storage).filter(storage_model.Storage.id == storage_id).first()
+    if not storage:
+        return False
+    
+    db.delete(storage)
+    db.commit()
+    return True
