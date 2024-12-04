@@ -23,3 +23,16 @@ def get_vaults(db: Session, skip: int = 0, limit: int = 100, location: str = Non
 
 def get_vault(db: Session, vault_id: int):
     return db.query(vault_model.Vault).filter(vault_model.Vault.id == vault_id).first()
+
+def update_vault(db: Session, vault_id: int, vault_update: vault_schema.VaultCreate):
+    vault = db.query(vault_model.Vault).filter(vault_model.Vault.id == vault_id).first()
+    
+    vault.name = vault_update.name
+    vault.size = vault_update.size
+    vault.capacity = vault_update.capacity
+    vault.price_per_hour = vault_update.price_per_hour
+
+    db.commit()
+    db.refresh(vault)
+    return vault
+

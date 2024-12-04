@@ -17,7 +17,7 @@ class TokenMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
         
         # Check for token in Authorization header
-        auth_header = request.headers.get("Authorization")
+        auth_header = request.headers.get("ExampleHeader")
         
         if not auth_header:
             # Return a JSONResponse instead of raising HTTPException

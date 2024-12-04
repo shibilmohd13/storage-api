@@ -26,3 +26,7 @@ def read_vault(vault_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Vault not found")
     return ResponseModel(code=200, message="Vault Fetched Successfully", data=db_vault) 
 
+@router.put("/{vault_id}", response_model=ResponseModel)
+def update_vault(vault_id: int, vault_update: vault_schema.VaultCreate, db: Session = Depends(get_db)):
+    updated_vault = vault_crud.update_vault(db=db, vault_id=vault_id, vault_update=vault_update)
+    return ResponseModel(code=200, message="Vault Updated Successfully", data=updated_vault) 
