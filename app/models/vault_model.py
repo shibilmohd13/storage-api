@@ -17,6 +17,8 @@ class Vault(Base):
     size = Column(Enum(VaultSize), nullable=False)
     capacity = Column(Integer, nullable=False)
     price_per_hour = Column(Float, nullable=False)
+    location = Column(String(length=255), default='Trivandrum', nullable=False) 
+
 
     # Relationship with Storage
     storages = relationship("Storage", back_populates="vault")
