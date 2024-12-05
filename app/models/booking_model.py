@@ -1,5 +1,5 @@
 # app/models/booking_model.py
-from sqlalchemy import Column, Integer, DateTime, ForeignKey, Float
+from sqlalchemy import Column, Integer, DateTime, ForeignKey, Float, Boolean
 from sqlalchemy.orm import relationship
 from app.database import Base
 
@@ -12,6 +12,7 @@ class Booking(Base):
     start_time = Column(DateTime, nullable=False)
     end_time = Column(DateTime, nullable=False)
     total_price = Column(Float, nullable=False)
+    is_canceled = Column(Boolean, default=False)  # New field
 
     # Relationships
     vault = relationship("Vault", back_populates="bookings")

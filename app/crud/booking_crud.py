@@ -6,9 +6,10 @@ from app.schemas import booking_schema
 from datetime import datetime
 
 def check_storage_availability(db: Session, storage_id: int, start_time: datetime, end_time: datetime):
-    # Check for conflicting bookings
+    # Check for conflicting bookings excluding canceled ones
     conflicting_bookings = db.query(booking_model.Booking).filter(
         booking_model.Booking.storage_id == storage_id,
+        booking_model.Booking.is_canceled == False,  # Ignore canceled bookings
         or_(
             and_(
                 booking_model.Booking.start_time <= start_time,
@@ -27,7 +28,7 @@ def check_storage_availability(db: Session, storage_id: int, start_time: datetim
     
     return len(conflicting_bookings) == 0
 
-# app/crud/booking_crud.py (continued)
+
 def calculate_total_price(db: Session, vault_id: int, start_time: datetime, end_time: datetime):
     # Fetch the vault to get hourly price
     from app.crud.vault_crud import get_vault
@@ -45,11 +46,9 @@ def calculate_total_price(db: Session, vault_id: int, start_time: datetime, end_
     return round(total_price, 2)
 
 def create_booking(db: Session, booking: booking_schema.BookingCreate):
-
     # Check storage availability
     if not check_storage_availability(db, booking.storage_id, booking.start_time, booking.end_time):
         raise ValueError("Storage is not available for the selected time range")
-    
     
     # Calculate total price
     total_price = calculate_total_price(
@@ -65,7 +64,8 @@ def create_booking(db: Session, booking: booking_schema.BookingCreate):
         storage_id=booking.storage_id,
         start_time=booking.start_time,
         end_time=booking.end_time,
-        total_price=total_price
+        total_price=total_price,
+        is_canceled=False  # Ensure the new booking is not marked as canceled
     )
     
     # Update storage availability
@@ -85,30 +85,40 @@ def create_booking(db: Session, booking: booking_schema.BookingCreate):
     
     return db_booking
 
-def get_bookings(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(booking_model.Booking).offset(skip).limit(limit).all()
+
+def get_bookings(db: Session, skip: int = 0, limit: int = 100, include_canceled: bool = False):
+    query = db.query(booking_model.Booking)
+    
+    if not include_canceled:
+        query = query.filter(booking_model.Booking.is_canceled == False)
+    
+    return query.offset(skip).limit(limit).all()
 
 def get_booking(db: Session, booking_id: int):
-    return db.query(booking_model.Booking).filter(booking_model.Booking.id == booking_id).first()
+    return db.query(booking_model.Booking).filter(
+        booking_model.Booking.id == booking_id
+    ).first()
 
 def delete_booking(db: Session, booking_id: int):
-    booking = db.query(booking_model.Booking).filter(booking_model.Booking.id == booking_id).first()
+    booking = db.query(booking_model.Booking).filter(
+        booking_model.Booking.id == booking_id
+    ).first()
     
     if not booking:
         return False
     
-    # Update storage availability when booking is deleted
-    storage = db.query(storage_model.Storage).filter(
-        storage_model.Storage.id == booking.storage_id
-    ).first()
-    
-    if storage:
-        storage.is_available = True
+    # Make storage available only if the booking was not canceled
+    if not booking.is_canceled:
+        storage = db.query(storage_model.Storage).filter(
+            storage_model.Storage.id == booking.storage_id
+        ).first()
+        if storage:
+            storage.is_available = True
     
     db.delete(booking)
     db.commit()
-    
     return True
+
 
 
 def update_booking(db: Session, booking_id: int, booking_update: booking_schema.BookingCreate):
@@ -120,9 +130,11 @@ def update_booking(db: Session, booking_id: int, booking_update: booking_schema.
     if not existing_booking:
         raise ValueError("Booking not found")
     
+    if existing_booking.is_canceled:
+        raise ValueError("Cannot update a canceled booking")
+    
     # Check if the new storage is available
     if booking_update.storage_id != existing_booking.storage_id:
-        # If changing storage, check availability
         is_available = check_storage_availability(
             db, 
             booking_update.storage_id, 
@@ -168,4 +180,33 @@ def update_booking(db: Session, booking_id: int, booking_update: booking_schema.
     
     return existing_booking
 
-# (Keep the rest of the existing methods from the previous CRUD implementation)
+
+
+def cancel_booking(db: Session, booking_id: int):
+    # Fetch the booking
+    booking = db.query(booking_model.Booking).filter(
+        booking_model.Booking.id == booking_id
+    ).first()
+    
+    if not booking:
+        raise ValueError("Booking not found")
+    
+    if booking.is_canceled:
+        raise ValueError("Booking is already canceled")
+    
+    # Mark as canceled
+    booking.is_canceled = True
+    
+    # Update storage availability
+    storage = db.query(storage_model.Storage).filter(
+        storage_model.Storage.id == booking.storage_id
+    ).first()
+    
+    if storage:
+        storage.is_available = True
+    
+    # Commit changes
+    db.commit()
+    db.refresh(booking)
+    
+    return booking

@@ -53,3 +53,17 @@ def delete_booking(booking_id: int, db: Session = Depends(get_db)):
     if not success:
         raise HTTPException(status_code=404, detail="Booking not found")
     return {"detail": "Booking deleted successfully"}
+# app/api/booking_routes.py
+
+@router.put("/{booking_id}/cancel", response_model=ResponseModel)
+def cancel_booking(booking_id: int, db: Session = Depends(get_db)):
+    try:
+        canceled_booking = booking_crud.cancel_booking(db=db, booking_id=booking_id)
+        return ResponseModel(
+            code=200, 
+            message="Booking Canceled Successfully", 
+            data=canceled_booking
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
